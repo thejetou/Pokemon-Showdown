@@ -2285,7 +2285,9 @@ export const Rulesets: import('../sim/dex-formats').FormatDataTable = {
 			newSpecies.baseStats = allies[2].baseSpecies.baseStats;
 			newSpecies.bst = allies[2].baseSpecies.bst;
 			pokemon.item = allies[0].item;
+			this.removeListenersFrom(pokemon.getAbility(), pokemon);
 			pokemon.ability = pokemon.baseAbility = allies[1].ability;
+			this.addListenersFrom(pokemon.getAbility(), pokemon, pokemon.abilityState, pokemon.clearAbility);
 			pokemon.set.evs = allies[2].set.evs;
 			pokemon.set.nature = allies[2].set.nature;
 			pokemon.set.ivs = allies[2].set.ivs;

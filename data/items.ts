@@ -206,6 +206,7 @@ export const Items: import('../sim/dex-items').ItemDataTable = {
 		// airborneness implemented in sim/pokemon.js:Pokemon#isGrounded
 		onDamagingHit(damage, target, source, move) {
 			this.add('-enditem', target, 'Air Balloon');
+			this.removeListenersFrom(target.getItem(), target);
 			target.item = '';
 			this.clearEffectState(target.itemState);
 			this.runEvent('AfterUseItem', target, null, null, this.dex.items.get('airballoon'));
@@ -214,6 +215,7 @@ export const Items: import('../sim/dex-items').ItemDataTable = {
 			this.debug('effect: ' + effect.id);
 			if (effect.effectType === 'Move') {
 				this.add('-enditem', target, 'Air Balloon');
+				this.removeListenersFrom(target.getItem(), target);
 				target.item = '';
 				this.clearEffectState(target.itemState);
 				this.runEvent('AfterUseItem', target, null, null, this.dex.items.get('airballoon'));

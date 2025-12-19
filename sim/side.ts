@@ -401,7 +401,9 @@ export class Side {
 			this.sideConditions[status.id].duration =
 				status.durationCallback.call(this.battle, this.active[0], source, sourceEffect);
 		}
+		this.battle.addListenersFrom(status, this, this.sideConditions[status.id], this.removeSideCondition);
 		if (!this.battle.singleEvent('SideStart', status, this.sideConditions[status.id], this, source, sourceEffect)) {
+			this.battle.removeListenersFrom(status, this);
 			delete this.sideConditions[status.id];
 			return false;
 		}
@@ -425,24 +427,25 @@ export class Side {
 		if (!this.sideConditions[status.id]) return false;
 		this.battle.singleEvent('SideEnd', status, this.sideConditions[status.id], this);
 		delete this.sideConditions[status.id];
+		this.battle.removeListenersFrom(status, this);
 		return true;
 	}
 
 	addSlotCondition(
-		target: Pokemon | number, status: string | Condition, source: Pokemon | 'debug' | null = null,
+		target: Pokemon, status: string | Condition, source: Pokemon | 'debug' | null = null,
 		sourceEffect: Effect | null = null
 	) {
 		source ??= this.battle.event?.target || null;
 		if (source === 'debug') source = this.active[0];
-		if (target instanceof Pokemon) target = target.position;
 		if (!source) throw new Error(`setting sidecond without a source`);
 
+		const targetPos = target.position;
 		status = this.battle.dex.conditions.get(status);
-		if (this.slotConditions[target][status.id]) {
+		if (this.slotConditions[targetPos][status.id]) {
 			if (!status.onRestart) return false;
-			return this.battle.singleEvent('Restart', status, this.slotConditions[target][status.id], this, source, sourceEffect);
+			return this.battle.singleEvent('Restart', status, this.slotConditions[targetPos][status.id], this, source, sourceEffect);
 		}
-		const conditionState = this.slotConditions[target][status.id] = this.battle.initEffectState({
+		const conditionState = this.slotConditions[targetPos][status.id] = this.battle.initEffectState({
 			id: status.id,
 			target: this,
 			source,
@@ -454,8 +457,10 @@ export class Side {
 			conditionState.duration =
 				status.durationCallback.call(this.battle, this.active[0], source, sourceEffect);
 		}
-		if (!this.battle.singleEvent('Start', status, conditionState, this.active[target], source, sourceEffect)) {
-			delete this.slotConditions[target][status.id];
+		this.battle.addListenersFrom(status, target, conditionState, this.removeSlotCondition, [this, target, status.id]);
+		if (!this.battle.singleEvent('Start', status, conditionState, this.active[targetPos], source, sourceEffect)) {
+			this.battle.removeListenersFrom(status, target);
+			delete this.slotConditions[targetPos][status.id];
 			return false;
 		}
 		return true;
@@ -468,12 +473,13 @@ export class Side {
 		return status;
 	}
 
-	removeSlotCondition(target: Pokemon | number, status: string | Effect) {
-		if (target instanceof Pokemon) target = target.position;
+	removeSlotCondition(target: Pokemon, status: string | Effect) {
+		const targetPos = target.position;
 		status = this.battle.dex.conditions.get(status) as Effect;
-		if (!this.slotConditions[target][status.id]) return false;
-		this.battle.singleEvent('End', status, this.slotConditions[target][status.id], this.active[target]);
-		delete this.slotConditions[target][status.id];
+		if (!this.slotConditions[targetPos][status.id]) return false;
+		this.battle.singleEvent('End', status, this.slotConditions[targetPos][status.id], this.active[targetPos]);
+		delete this.slotConditions[targetPos][status.id];
+		this.battle.removeListenersFrom(status, target);
 		return true;
 	}
 

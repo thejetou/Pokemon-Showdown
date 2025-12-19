@@ -728,7 +728,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				}
 				if (target.lastMove && target.lastMove.id === 'struggle') {
 					// don't lock
-					delete target.volatiles['uproar'];
+					target.removeVolatile('uproar');
 				}
 				this.add('-start', target, 'Uproar', '[upkeep]');
 			},

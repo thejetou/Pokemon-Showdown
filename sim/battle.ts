@@ -94,6 +94,22 @@ interface EventListener extends EventListenerWithoutPriority {
 	speed?: number;
 }
 
+interface EventHandler {
+	effect: Effect;
+	callback: Function;
+	state: EffectState;
+	end: Function | null;
+	effectHolder: Pokemon | Side | Field | Battle;
+	endCallArgs?: any[];
+	filter: EventFilter;
+}
+
+type EventFilter =
+	| 'p:' | 'p:Any' | 'p:Ally' | 'p:Foe' | 'p:Source'
+	| 's:' | 's:Any' | 's:Foe' | 's:Side'
+	| 'f:Field' | 'f:'
+	| 'b:';
+
 type Part = string | number | boolean | Pokemon | Side | Effect | Move | null | undefined;
 
 // The current request state of the Battle:
@@ -123,6 +139,7 @@ export class Battle {
 	readonly field: Field;
 	readonly sides: [Side, Side] | [Side, Side, Side, Side];
 	readonly prngSeed: PRNGSeed;
+	readonly eventListeners = new Map<string, Set<EventHandler>>;
 	dex: ModdedDex;
 	gen: number;
 	ruleTable: Dex.RuleTable;
@@ -275,6 +292,8 @@ export class Battle {
 		this.SILENT_FAIL = null;
 
 		this.send = options.send || (() => {});
+
+		this.addListenersFrom(this.format, this, this.formatData, null);
 
 		const inputOptions: { formatid: ID, seed: PRNGSeed, rated?: string | true } = {
 			formatid: options.formatid, seed: this.prngSeed,
@@ -482,26 +501,25 @@ export class Battle {
 	 * the 'Residual' and 'SwitchIn' events.
 	 */
 	fieldEvent(eventid: string, targets?: Pokemon[]) {
-		const callbackName = `on${eventid}`;
 		let getKey: undefined | 'duration';
 		if (eventid === 'Residual') {
 			getKey = 'duration';
 		}
-		let handlers = this.findFieldEventHandlers(this.field, `onField${eventid}`, getKey);
+		let handlers = this.findFieldEventHandlers(this.field, eventid, 'f:Field', getKey);
 		for (const side of this.sides) {
 			if (side.n < 2 || !side.allySide) {
-				handlers = handlers.concat(this.findSideEventHandlers(side, `onSide${eventid}`, getKey));
+				handlers = handlers.concat(this.findSideEventHandlers(side, eventid, 's:Side', getKey));
 			}
 			for (const active of side.active) {
 				if (!active) continue;
 				if (eventid === 'SwitchIn') {
-					handlers = handlers.concat(this.findPokemonEventHandlers(active, `onAny${eventid}`));
+					handlers = handlers.concat(this.findPokemonEventHandlers(active, eventid, 'p:Any'));
 				}
 				if (targets && !targets.includes(active)) continue;
-				handlers = handlers.concat(this.findPokemonEventHandlers(active, callbackName, getKey));
-				handlers = handlers.concat(this.findSideEventHandlers(side, callbackName, undefined, active));
-				handlers = handlers.concat(this.findFieldEventHandlers(this.field, callbackName, undefined, active));
-				handlers = handlers.concat(this.findBattleEventHandlers(callbackName, getKey, active));
+				handlers = handlers.concat(this.findPokemonEventHandlers(active, eventid, 'p:', getKey));
+				handlers = handlers.concat(this.findSideEventHandlers(side, eventid, 's:', undefined, active));
+				handlers = handlers.concat(this.findFieldEventHandlers(this.field, eventid, 'f:', undefined, active));
+				handlers = handlers.concat(this.findBattleEventHandlers(eventid, getKey, active));
 			}
 		}
 		this.speedSort(handlers);
@@ -1016,6 +1034,98 @@ export class Battle {
 		return handler;
 	}
 
+	addListenersFrom(
+		effect: Effect, holder: Pokemon | Side | Field | Battle,
+		effectState: EffectState, end: Function | null, endCallArgs?: any[]
+	) {
+		if (!effect.id) return;
+		let holderType = 'b';
+		if (holder instanceof Pokemon) holderType = 'p';
+		else if (holder instanceof Side) holderType = 's';
+		else if (holder instanceof Field) holderType = 'f';
+		for (let key in effect) {
+			if (holderType === 'f' && key === 'duration' && effect.duration && !('onFieldResidual' in effect)) {
+				key = 'onFieldResidual';
+			}
+			if (key === 'duration' && effect.duration && !('onResidual' in effect)) {
+				key = 'onResidual';
+			}
+			if (!key.startsWith('on')) continue;
+			let filter: string | undefined = `${holderType}:`;
+			let eventName = key.slice(2);
+			if (eventName.startsWith('Any')) {
+				eventName = eventName.slice(3);
+				filter = `${holderType}:Any`;
+			} else if (eventName.startsWith('Source')) {
+				eventName = eventName.slice(6);
+				filter = `${holderType}:Source`;
+			} else if (eventName.startsWith('Ally')) {
+				eventName = eventName.slice(4);
+				filter = `${holderType}:Ally`;
+			} else if (eventName.startsWith('Foe')) {
+				eventName = eventName.slice(3);
+				filter = `${holderType}:Foe`;
+			} else if (eventName.startsWith('Side') && eventName !== 'SideConditionStart') {
+				eventName = eventName.slice(4);
+				filter = `${holderType}:Side`;
+			} else if (eventName.startsWith('Field')) {
+				eventName = eventName.slice(5);
+				filter = `${holderType}:Field`;
+			}
+			let table = this.eventListeners.get(eventName);
+			if (!table) {
+				table = new Set();
+				this.eventListeners.set(eventName, table);
+			}
+			const handler: EventHandler = {
+				effect,
+				callback: this.getCallback(holder, effect, key)!,
+				state: effectState,
+				end,
+				effectHolder: holder,
+				filter: filter as EventFilter,
+			};
+			if (endCallArgs) handler.endCallArgs = endCallArgs;
+			table.add(handler);
+		}
+		if (
+			holder instanceof Pokemon && this.gen >= 5 &&
+			(effect as any).onStart && !(effect as any).onAnySwitchIn &&
+			(
+				['Ability', 'Item'].includes(effect.effectType) || (
+					// Innate abilities/items
+					effect.effectType === 'Status' && ['ability', 'item'].includes(effect.id.split(':')[0])
+				)
+			)
+		) {
+			let table = this.eventListeners.get('SwitchIn');
+			if (!table) {
+				table = new Set();
+				this.eventListeners.set('SwitchIn', table);
+			}
+			const handler: EventHandler = {
+				effect,
+				callback: this.getCallback(holder, effect, 'onStart')!,
+				state: effectState,
+				end,
+				effectHolder: holder,
+				filter: 'p:',
+			};
+			if (endCallArgs) handler.endCallArgs = endCallArgs;
+			table.add(handler);
+		}
+	}
+
+	removeListenersFrom(effect: Effect | null, holder: Pokemon | Side | Battle | Field) {
+		for (const table of this.eventListeners.values()) {
+			for (const handler of table) {
+				if (((!effect && !handler.endCallArgs) || handler.effect === effect) && handler.effectHolder === holder) {
+					table.delete(handler);
+				}
+			}
+		}
+	}
+
 	getCallback(target: Pokemon | Side | Field | Battle, effect: Effect, callbackName: string) {
 		let callback: Function | undefined = (effect as any)[callbackName];
 		// Abilities and items Start at different times during the SwitchIn event, so we run their onStart handlers
@@ -1052,121 +1162,83 @@ export class Battle {
 		// events usually run through EachEvent should never have any handlers besides `on${eventName}` so don't check for them
 		const prefixedHandlers = !['BeforeTurn', 'Update', 'Weather', 'WeatherChange', 'TerrainChange'].includes(eventName);
 		if (target instanceof Pokemon && (target.isActive || source?.isActive)) {
-			handlers = this.findPokemonEventHandlers(target, `on${eventName}`);
+			handlers = this.findPokemonEventHandlers(target, eventName, 'p:');
 			if (prefixedHandlers) {
 				for (const allyActive of target.alliesAndSelf()) {
-					handlers.push(...this.findPokemonEventHandlers(allyActive, `onAlly${eventName}`));
-					handlers.push(...this.findPokemonEventHandlers(allyActive, `onAny${eventName}`));
+					handlers.push(...this.findPokemonEventHandlers(allyActive, eventName, 'p:Ally'));
+					handlers.push(...this.findPokemonEventHandlers(allyActive, eventName, 'p:Any'));
 				}
 				for (const foeActive of target.foes()) {
-					handlers.push(...this.findPokemonEventHandlers(foeActive, `onFoe${eventName}`));
-					handlers.push(...this.findPokemonEventHandlers(foeActive, `onAny${eventName}`));
+					handlers.push(...this.findPokemonEventHandlers(foeActive, eventName, 'p:Foe'));
+					handlers.push(...this.findPokemonEventHandlers(foeActive, eventName, 'p:Any'));
 				}
 			}
 			target = target.side;
 		}
 		if (source && prefixedHandlers) {
-			handlers.push(...this.findPokemonEventHandlers(source, `onSource${eventName}`));
+			handlers.push(...this.findPokemonEventHandlers(source, eventName, 'p:Source'));
 		}
 		if (target instanceof Side) {
 			for (const side of this.sides) {
 				if (shouldBubbleDown) {
 					for (const active of side.active) {
 						if (side === target || side === target.allySide) {
-							handlers = handlers.concat(this.findPokemonEventHandlers(active, `on${eventName}`));
+							handlers = handlers.concat(this.findPokemonEventHandlers(active, eventName, 'p:'));
 						} else if (prefixedHandlers) {
-							handlers = handlers.concat(this.findPokemonEventHandlers(active, `onFoe${eventName}`));
+							handlers = handlers.concat(this.findPokemonEventHandlers(active, eventName, 'p:Foe'));
 						}
-						if (prefixedHandlers) handlers = handlers.concat(this.findPokemonEventHandlers(active, `onAny${eventName}`));
+						if (prefixedHandlers) handlers = handlers.concat(this.findPokemonEventHandlers(active, eventName, 'p:Any'));
 					}
 				}
 				if (side.n < 2 || !side.allySide) {
 					if (side === target || side === target.allySide) {
-						handlers.push(...this.findSideEventHandlers(side, `on${eventName}`));
+						handlers.push(...this.findSideEventHandlers(side, eventName, 's:'));
 					} else if (prefixedHandlers) {
-						handlers.push(...this.findSideEventHandlers(side, `onFoe${eventName}`));
+						handlers.push(...this.findSideEventHandlers(side, eventName, 's:Foe'));
 					}
-					if (prefixedHandlers) handlers.push(...this.findSideEventHandlers(side, `onAny${eventName}`));
+					if (prefixedHandlers) handlers.push(...this.findSideEventHandlers(side, eventName, 's:Any'));
 				}
 			}
 		}
-		handlers.push(...this.findFieldEventHandlers(this.field, `on${eventName}`));
-		handlers.push(...this.findBattleEventHandlers(`on${eventName}`));
+		handlers.push(...this.findFieldEventHandlers(this.field, eventName, 'f:'));
+		handlers.push(...this.findBattleEventHandlers(eventName));
 		return handlers;
 	}
 
-	findPokemonEventHandlers(pokemon: Pokemon, callbackName: string, getKey?: 'duration') {
+	findPokemonEventHandlers(pokemon: Pokemon, eventName: string, filter: string, getKey?: 'duration') {
+		const callbackName = `on${filter.slice(2)}${eventName}`;
 		const handlers: EventListener[] = [];
 
-		const status = pokemon.getStatus();
-		let callback = this.getCallback(pokemon, status, callbackName);
-		if (callback !== undefined || (getKey && pokemon.statusState[getKey])) {
-			handlers.push(this.resolvePriority({
-				effect: status, callback, state: pokemon.statusState, end: pokemon.clearStatus, effectHolder: pokemon,
-			}, callbackName));
-		}
-		for (const id in pokemon.volatiles) {
-			const volatileState = pokemon.volatiles[id];
-			const volatile = this.dex.conditions.getByID(id as ID);
-			callback = this.getCallback(pokemon, volatile, callbackName);
-			if (callback !== undefined || (getKey && volatileState[getKey])) {
-				handlers.push(this.resolvePriority({
-					effect: volatile, callback, state: volatileState, end: pokemon.removeVolatile, effectHolder: pokemon,
-				}, callbackName));
-			}
-		}
-		const ability = pokemon.getAbility();
-		callback = this.getCallback(pokemon, ability, callbackName);
-		if (callback !== undefined || (getKey && pokemon.abilityState[getKey])) {
-			handlers.push(this.resolvePriority({
-				effect: ability, callback, state: pokemon.abilityState, end: pokemon.clearAbility, effectHolder: pokemon,
-			}, callbackName));
-		}
-		const item = pokemon.getItem();
-		callback = this.getCallback(pokemon, item, callbackName);
-		if (callback !== undefined || (getKey && pokemon.itemState[getKey])) {
-			handlers.push(this.resolvePriority({
-				effect: item, callback, state: pokemon.itemState, end: pokemon.clearItem, effectHolder: pokemon,
-			}, callbackName));
-		}
-		const species = pokemon.baseSpecies;
-		callback = this.getCallback(pokemon, species, callbackName);
-		if (callback !== undefined) {
-			handlers.push(this.resolvePriority({
-				effect: species, callback, state: pokemon.speciesState, end() {}, effectHolder: pokemon,
-			}, callbackName));
-		}
-		const side = pokemon.side;
-		for (const conditionid in side.slotConditions[pokemon.position]) {
-			const slotConditionState = side.slotConditions[pokemon.position][conditionid];
-			const slotCondition = this.dex.conditions.getByID(conditionid as ID);
-			callback = this.getCallback(pokemon, slotCondition, callbackName);
-			if (callback !== undefined || (getKey && slotConditionState[getKey])) {
-				handlers.push(this.resolvePriority({
-					effect: slotCondition,
-					callback,
-					state: slotConditionState,
-					end: side.removeSlotCondition,
-					endCallArgs: [side, pokemon, slotCondition.id],
-					effectHolder: pokemon,
-				}, callbackName));
+		const table = this.eventListeners.get(eventName);
+		if (table) {
+			for (const handler of table) {
+				if (handler.effectHolder === pokemon && handler.filter === filter) {
+					handlers.push(this.resolvePriority({ ...handler }, callbackName));
+				}
 			}
 		}
 
 		return handlers;
 	}
 
-	findBattleEventHandlers(callbackName: string, getKey?: 'duration', customHolder?: Pokemon) {
+	findBattleEventHandlers(eventName: string, getKey?: 'duration', customHolder?: Pokemon) {
+		const callbackName = `on${eventName}`;
 		const handlers: EventListener[] = [];
+
+		const table = this.eventListeners.get(eventName);
+		if (table) {
+			for (const handler of table) {
+				if (handler.effectHolder === this && handler.filter === 'b:') {
+					const copy = { ...handler };
+					if (customHolder) {
+						copy.effectHolder = customHolder;
+					}
+					handlers.push(this.resolvePriority(copy, callbackName));
+				}
+			}
+		}
 
 		let callback;
-		const format = this.format;
-		callback = this.getCallback(this, format, callbackName);
-		if (callback !== undefined || (getKey && this.formatData[getKey])) {
-			handlers.push(this.resolvePriority({
-				effect: format, callback, state: this.formatData, end: null, effectHolder: customHolder || this,
-			}, callbackName));
-		}
 		if (this.events && (callback = this.events[callbackName]) !== undefined) {
 			for (const handler of callback) {
 				const state = (handler.target.effectType === 'Format') ? this.formatData : null;
@@ -1176,58 +1248,49 @@ export class Battle {
 				});
 			}
 		}
+
 		return handlers;
 	}
 
-	findFieldEventHandlers(field: Field, callbackName: string, getKey?: 'duration', customHolder?: Pokemon) {
+	findFieldEventHandlers(field: Field, eventid: string, filter: string, getKey?: 'duration', customHolder?: Pokemon) {
+		const callbackName = `on${filter.slice(2)}${eventid}`;
 		const handlers: EventListener[] = [];
 
-		let callback;
-		for (const id in field.pseudoWeather) {
-			const pseudoWeatherState = field.pseudoWeather[id];
-			const pseudoWeather = this.dex.conditions.getByID(id as ID);
-			callback = this.getCallback(field, pseudoWeather, callbackName);
-			if (callback !== undefined || (getKey && pseudoWeatherState[getKey])) {
-				handlers.push(this.resolvePriority({
-					effect: pseudoWeather, callback, state: pseudoWeatherState,
-					end: customHolder ? null : field.removePseudoWeather, effectHolder: customHolder || field,
-				}, callbackName));
+		const table = this.eventListeners.get(eventid);
+		if (table) {
+			for (const handler of table) {
+				if (handler.effectHolder === field && handler.filter === filter) {
+					const copy = { ...handler };
+					if (customHolder) {
+						copy.end = null;
+						copy.effectHolder = customHolder;
+					}
+					handlers.push(this.resolvePriority(copy, callbackName));
+				}
 			}
-		}
-		const weather = field.getWeather();
-		callback = this.getCallback(field, weather, callbackName);
-		if (callback !== undefined || (getKey && this.field.weatherState[getKey])) {
-			handlers.push(this.resolvePriority({
-				effect: weather, callback, state: this.field.weatherState,
-				end: customHolder ? null : field.clearWeather, effectHolder: customHolder || field,
-			}, callbackName));
-		}
-		const terrain = field.getTerrain();
-		callback = this.getCallback(field, terrain, callbackName);
-		if (callback !== undefined || (getKey && field.terrainState[getKey])) {
-			handlers.push(this.resolvePriority({
-				effect: terrain, callback, state: field.terrainState,
-				end: customHolder ? null : field.clearTerrain, effectHolder: customHolder || field,
-			}, callbackName));
 		}
 
 		return handlers;
 	}
 
-	findSideEventHandlers(side: Side, callbackName: string, getKey?: 'duration', customHolder?: Pokemon) {
+	findSideEventHandlers(side: Side, eventName: string, filter: string, getKey?: 'duration', customHolder?: Pokemon) {
+		const callbackName = `on${filter.slice(2)}${eventName}`;
 		const handlers: EventListener[] = [];
 
-		for (const id in side.sideConditions) {
-			const sideConditionData = side.sideConditions[id];
-			const sideCondition = this.dex.conditions.getByID(id as ID);
-			const callback = this.getCallback(side, sideCondition, callbackName);
-			if (callback !== undefined || (getKey && sideConditionData[getKey])) {
-				handlers.push(this.resolvePriority({
-					effect: sideCondition, callback, state: sideConditionData,
-					end: customHolder ? null : side.removeSideCondition, effectHolder: customHolder || side,
-				}, callbackName));
+		const table = this.eventListeners.get(eventName);
+		if (table) {
+			for (const handler of table) {
+				if (handler.effectHolder === side && handler.filter === filter) {
+					const copy = { ...handler };
+					if (customHolder) {
+						copy.end = null;
+						copy.effectHolder = customHolder;
+					}
+					handlers.push(this.resolvePriority(copy, callbackName));
+				}
 			}
 		}
+
 		return handlers;
 	}
 
@@ -1549,6 +1612,26 @@ export class Battle {
 		this.add('swap', pokemon, newPosition, attributes || '');
 
 		const side = pokemon.side;
+		for (const conditionid in side.slotConditions[pokemon.position]) {
+			const conditionState = side.slotConditions[pokemon.position][conditionid];
+			const condition = this.dex.conditions.get(conditionid);
+			this.removeListenersFrom(condition, pokemon);
+			this.addListenersFrom(
+				condition, target,
+				conditionState, target.side.removeSlotCondition,
+				[target.side, target, condition.id]
+			);
+		}
+		for (const conditionid in side.slotConditions[target.position]) {
+			const conditionState = side.slotConditions[target.position][conditionid];
+			const condition = this.dex.conditions.get(conditionid);
+			this.removeListenersFrom(condition, target);
+			this.addListenersFrom(
+				condition, pokemon,
+				conditionState, pokemon.side.removeSlotCondition,
+				[pokemon.side, target, condition.id]
+			);
+		}
 		side.pokemon[pokemon.position] = target;
 		side.pokemon[newPosition] = pokemon;
 		side.active[pokemon.position] = side.pokemon[pokemon.position];
@@ -1598,19 +1681,19 @@ export class Battle {
 				if (pokemon.volatiles['partialtrappinglock']) {
 					const target = pokemon.volatiles['partialtrappinglock'].locked;
 					if (target.hp <= 0 || !target.volatiles['partiallytrapped']) {
-						delete pokemon.volatiles['partialtrappinglock'];
+						pokemon.removeVolatile('partialtrappinglock');
 					}
 				}
 				if (pokemon.volatiles['partiallytrapped']) {
 					const source = pokemon.volatiles['partiallytrapped'].source;
 					if (source.hp <= 0 || !source.volatiles['partialtrappinglock']) {
-						delete pokemon.volatiles['partiallytrapped'];
+						pokemon.removeVolatile('partiallytrapped');
 					}
 				}
 				if (pokemon.volatiles['fakepartiallytrapped']) {
 					const counterpart = pokemon.volatiles['fakepartiallytrapped'].counterpart;
 					if (counterpart.hp <= 0 || !counterpart.volatiles['fakepartiallytrapped']) {
-						delete pokemon.volatiles['fakepartiallytrapped'];
+						pokemon.removeVolatile('fakepartiallytrapped');
 					}
 				}
 			}
@@ -2654,6 +2737,7 @@ export class Battle {
 				pokemon.details = pokemon.getUpdatedDetails();
 				pokemon.setAbility(species.abilities['0'], null, null, true);
 				pokemon.baseAbility = pokemon.ability;
+				this.removeListenersFrom(pokemon.getAbility(), pokemon);
 
 				const behemothMove: { [k: string]: string } = {
 					'Zacian-Crowned': 'behemothblade', 'Zamazenta-Crowned': 'behemothbash',
@@ -2789,6 +2873,7 @@ export class Battle {
 			action.target.fainted = false;
 			action.target.faintQueued = false;
 			action.target.subFainted = false;
+			this.removeListenersFrom(action.target.getStatus(), action.target);
 			action.target.status = '';
 			action.target.hp = 1; // Needed so hp functions works
 			action.target.sethp(action.target.maxhp / 2);

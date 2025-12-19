@@ -1427,7 +1427,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (this.checkMoveMakesContact(move, source, target)) {
@@ -2023,11 +2023,11 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				}
 				if (pokemon.volatiles['magnetrise']) {
 					applies = true;
-					delete pokemon.volatiles['magnetrise'];
+					pokemon.removeVolatile('magnetrise');
 				}
 				if (pokemon.volatiles['telekinesis']) {
 					applies = true;
-					delete pokemon.volatiles['telekinesis'];
+					pokemon.removeVolatile('telekinesis');
 				}
 				if (!applies) return false;
 				this.add('-start', pokemon, 'Smack Down');

@@ -219,13 +219,13 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (linkedMoves.includes(lastMove.id) && this.dex.moves.get((linkedMoves[0])).flags['failencore'] &&
 					this.dex.moves.get((linkedMoves[1])).flags['failencore']) {
 					// both moves cannot be encored
-					delete target.volatiles['encore'];
+					target.removeVolatile('encore');
 					return false;
 				}
 				if (lastMove.isZ || lastMove.flags['failencore'] ||
 					(target.moveSlots[moveIndex] && target.moveSlots[moveIndex].pp <= 0)) {
 					// it failed
-					delete target.volatiles['encore'];
+					target.removeVolatile('encore');
 					return false;
 				}
 				this.effectState.turnsActivated = {};
@@ -277,12 +277,12 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (target.hasLinkedMove(lastMove.id)) {
 					// TODO: Check instead whether the last executed move was linked
 					if (target.moveSlots[0].pp <= 0 || target.moveSlots[1].pp <= 0) {
-						delete target.volatiles.encore;
+						target.removeVolatile('encore');
 						this.add('-end', target, 'Encore');
 					}
 				} else {
 					if (target.moveSlots[index].pp <= 0) {
-						delete target.volatiles.encore;
+						target.removeVolatile('encore');
 						this.add('-end', target, 'Encore');
 					}
 				}
@@ -315,7 +315,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			noCopy: true,
 			onStart(pokemon) {
 				if (pokemon.volatiles['dynamax']) {
-					delete pokemon.volatiles['torment'];
+					pokemon.removeVolatile('torment');
 					return false;
 				}
 				this.add('-start', pokemon, 'Torment');
@@ -441,7 +441,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				// This is just to ensure the volatile is deleted correctly
 				const lastMove: Move | ActiveMove | null = target.m.lastMoveAbsolute;
 				if (lastMove?.id === 'struggle') {
-					delete target.volatiles['iceball'];
+					target.removeVolatile('iceball');
 				}
 			},
 		},
@@ -458,7 +458,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				// This is just to ensure the volatile is deleted correctly
 				const lastMove: Move | ActiveMove | null = target.m.lastMoveAbsolute;
 				if (lastMove?.id === 'struggle') {
-					delete target.volatiles['rollout'];
+					target.removeVolatile('rollout');
 				}
 			},
 		},

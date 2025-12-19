@@ -995,7 +995,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			}
 		},
 		onEnd(pokemon) {
-			delete pokemon.volatiles['protopyre'];
+			pokemon.removeVolatile('protopyre');
 			this.add('-end', pokemon, 'Protopyre', '[silent]');
 		},
 		condition: {

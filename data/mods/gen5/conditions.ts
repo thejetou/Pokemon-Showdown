@@ -14,7 +14,7 @@ export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDa
 		onResidual(pokemon) {
 			const trapper = this.effectState.source;
 			if (trapper && (!trapper.isActive || trapper.hp <= 0 || !trapper.activeTurns)) {
-				delete pokemon.volatiles['partiallytrapped'];
+				pokemon.removeVolatile('partiallytrapped');
 				this.add('-end', pokemon, this.effectState.sourceEffect, '[partiallytrapped]', '[silent]');
 				return;
 			}

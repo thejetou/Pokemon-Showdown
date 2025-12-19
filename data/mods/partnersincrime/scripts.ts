@@ -10,15 +10,15 @@ export const Scripts: ModdedBattleScriptsData = {
 		if (eventid === 'Residual') {
 			getKey = 'duration';
 		}
-		let handlers = this.findFieldEventHandlers(this.field, `onField${eventid}`, getKey);
+		let handlers = this.findFieldEventHandlers(this.field, eventid, 'f:Field', getKey);
 		for (const side of this.sides) {
 			if (side.n < 2 || !side.allySide) {
-				handlers = handlers.concat(this.findSideEventHandlers(side, `onSide${eventid}`, getKey));
+				handlers = handlers.concat(this.findSideEventHandlers(side, eventid, 's:Side', getKey));
 			}
 			for (const active of side.active) {
 				if (!active) continue;
 				if (eventid === 'SwitchIn') {
-					handlers = handlers.concat(this.findPokemonEventHandlers(active, `onAny${eventid}`));
+					handlers = handlers.concat(this.findPokemonEventHandlers(active, eventid, 'p:Any'));
 				}
 				if (targets && !targets.includes(active)) continue;
 				// The ally of the pokemon
@@ -45,10 +45,10 @@ export const Scripts: ModdedBattleScriptsData = {
 						}
 					}
 				}
-				handlers = handlers.concat(this.findPokemonEventHandlers(active, callbackName, getKey));
-				handlers = handlers.concat(this.findSideEventHandlers(side, callbackName, undefined, active));
-				handlers = handlers.concat(this.findFieldEventHandlers(this.field, callbackName, undefined, active));
-				handlers = handlers.concat(this.findBattleEventHandlers(callbackName, getKey, active));
+				handlers = handlers.concat(this.findPokemonEventHandlers(active, eventid, 'p:', getKey));
+				handlers = handlers.concat(this.findSideEventHandlers(side, eventid, 's:', undefined, active));
+				handlers = handlers.concat(this.findFieldEventHandlers(this.field, eventid, 'f:', undefined, active));
+				handlers = handlers.concat(this.findBattleEventHandlers(eventid, getKey, active));
 			}
 		}
 		this.speedSort(handlers);
@@ -154,13 +154,13 @@ export const Scripts: ModdedBattleScriptsData = {
 				if (pokemon.volatiles['partialtrappinglock']) {
 					const target = pokemon.volatiles['partialtrappinglock'].locked;
 					if (target.hp <= 0 || !target.volatiles['partiallytrapped']) {
-						delete pokemon.volatiles['partialtrappinglock'];
+						pokemon.removeVolatile('partialtrappinglock');
 					}
 				}
 				if (pokemon.volatiles['partiallytrapped']) {
 					const source = pokemon.volatiles['partiallytrapped'].source;
 					if (source.hp <= 0 || !source.volatiles['partialtrappinglock']) {
-						delete pokemon.volatiles['partiallytrapped'];
+						pokemon.removeVolatile('partiallytrapped');
 					}
 				}
 			}
@@ -330,8 +330,10 @@ export const Scripts: ModdedBattleScriptsData = {
 				ally.removeVolatile(ally.m.innate);
 				delete ally.m.innate;
 			}
+			this.battle.removeListenersFrom(this.getAbility(), this);
 			this.ability = ability.id;
 			this.abilityState = this.battle.initEffectState({ id: ability.id, target: this });
+			this.battle.addListenersFrom(ability, this, this.abilityState, this.clearAbility);
 			if (sourceEffect && !isFromFormeChange && !isTransform) {
 				if (source) {
 					this.battle.add('-ability', this, ability.name, oldAbility.name, `[from] ${sourceEffect.fullname}`, `[of] ${source}`);

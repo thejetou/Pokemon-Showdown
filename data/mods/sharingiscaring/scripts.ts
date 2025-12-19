@@ -55,7 +55,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				this.battle.singleEvent('Use', item, this.itemState, this, source, sourceEffect);
 
 				if (item.id.startsWith('item:')) {
-					delete this.volatiles[item.id];
+					this.removeVolatile(item.id);
 					this.m.sharedItemsUsed.push(item.id.slice(5));
 				} else {
 					this.lastItem = this.item;
@@ -99,7 +99,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				}
 
 				if (item.id.startsWith('item:')) {
-					delete this.volatiles[item.id];
+					this.removeVolatile(item.id);
 					this.m.sharedItemsUsed.push(item.id.slice(5));
 				} else {
 					this.lastItem = this.item;

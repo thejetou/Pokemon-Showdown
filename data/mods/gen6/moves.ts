@@ -281,7 +281,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				return null;

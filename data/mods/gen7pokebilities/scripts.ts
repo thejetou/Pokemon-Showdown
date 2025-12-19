@@ -168,7 +168,9 @@ export const Scripts: ModdedBattleScriptsData = {
 			const apparentSpecies =
 				this.illusion ? this.illusion.species.name : species.baseSpecies;
 			if (isPermanent) {
+				this.battle.removeListenersFrom(this.baseSpecies, this);
 				this.baseSpecies = rawSpecies;
+				this.battle.addListenersFrom(this.baseSpecies, this, this.speciesState, () => {});
 				this.details = this.getUpdatedDetails();
 				this.battle.add('detailschange', this, (this.illusion || this).details);
 				if (source.effectType === 'Item') {
@@ -178,6 +180,7 @@ export const Scripts: ModdedBattleScriptsData = {
 						this.moveThisTurnResult = true; // Ultra Burst counts as an action for Truant
 					} else if (source.isPrimalOrb) {
 						if (this.illusion) {
+							this.battle.removeListenersFrom(this.getAbility(), this);
 							this.ability = '';
 							this.battle.add('-primal', this.illusion);
 						} else {
@@ -200,6 +203,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			}
 			if (isPermanent && !['disguise', 'iceface', 'ability:disguise', 'ability:iceface'].includes(source.id)) {
 				if (this.illusion) {
+					this.battle.removeListenersFrom(this.getAbility(), this);
 					this.ability = ''; // Don't allow Illusion to wear off
 				}
 				this.setAbility(species.abilities['0'], null, null, true);

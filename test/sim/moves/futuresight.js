@@ -409,7 +409,6 @@ describe('Future Sight', () => {
 		], [
 			{ species: 'Happiny', moves: ['stealthrock', 'futuresight'] },
 		]]);
-
 		battle.makeChoices('auto', 'move futuresight');
 		battle.makeChoices('auto', 'move stealthrock');
 		battle.makeChoices('switch 2', 'auto');

@@ -142,6 +142,22 @@ export class BattleActions {
 		}
 		pokemon.abilityState = this.battle.initEffectState({ id: pokemon.ability, target: pokemon });
 		pokemon.itemState = this.battle.initEffectState({ id: pokemon.item, target: pokemon });
+		for (const conditionid in pokemon.side.slotConditions[pokemon.position]) {
+			const conditionState = pokemon.side.slotConditions[pokemon.position][conditionid];
+			const condition = this.dex.conditions.get(conditionid);
+			this.battle.addListenersFrom(
+				condition, pokemon,
+				conditionState, pokemon.side.removeSlotCondition,
+				[pokemon.side, pokemon, condition.id]
+			);
+		}
+		this.battle.addListenersFrom(pokemon.baseSpecies, pokemon, pokemon.speciesState, () => {});
+		const status = pokemon.getStatus();
+		if (status) this.battle.addListenersFrom(pokemon.getStatus(), pokemon, pokemon.statusState, pokemon.clearStatus);
+		const item = pokemon.getItem();
+		if (item) this.battle.addListenersFrom(pokemon.getItem(), pokemon, pokemon.itemState, pokemon.clearItem);
+		const ability = pokemon.getAbility();
+		if (ability) this.battle.addListenersFrom(pokemon.getAbility(), pokemon, pokemon.abilityState, pokemon.clearAbility);
 		this.battle.runEvent('BeforeSwitchIn', pokemon);
 		if (sourceEffect) {
 			this.battle.add(isDrag ? 'drag' : 'switch', pokemon, pokemon.getFullDetails, `[from] ${sourceEffect}`);
@@ -150,7 +166,6 @@ export class BattleActions {
 		}
 		if (isDrag && this.battle.gen === 2) pokemon.draggedIn = this.battle.turn;
 		pokemon.previouslySwitchedIn++;
-
 		if (isDrag && this.battle.gen >= 5) {
 			// runSwitch happens immediately so that Mold Breaker can make hazards bypass Clear Body and Levitate
 			this.runSwitch(pokemon);
@@ -346,7 +361,7 @@ export class BattleActions {
 				this.runMove(move.id, dancer, dancersTargetLoc, { sourceEffect: this.dex.abilities.get('dancer'), externalMove: true });
 			}
 		}
-		if (noLock && pokemon.volatiles['lockedmove']) delete pokemon.volatiles['lockedmove'];
+		if (noLock && pokemon.volatiles['lockedmove']) pokemon.removeVolatile('lockedmove');
 		this.battle.faintMessages();
 		this.battle.checkWin();
 
@@ -767,7 +782,7 @@ export class BattleActions {
 					} else {
 						this.battle.add('-activate', target, `move: ${move.name}`, '[broken]');
 					}
-					if (this.battle.gen >= 6) delete target.volatiles['stall'];
+					if (this.battle.gen >= 6) target.removeVolatile('stall');
 				}
 			}
 		}
@@ -1961,7 +1976,9 @@ export class BattleActions {
 			pokemon.baseSpecies.id !== pokemon.species.id
 		) {
 			pokemon.formeRegression = true;
+			this.battle.removeListenersFrom(pokemon.baseSpecies, pokemon);
 			pokemon.baseSpecies = pokemon.species;
+			this.battle.addListenersFrom(pokemon.baseSpecies, pokemon, pokemon.speciesState, () => {});
 			pokemon.details = pokemon.getUpdatedDetails();
 		}
 		this.battle.runEvent('AfterTerastallization', pokemon);

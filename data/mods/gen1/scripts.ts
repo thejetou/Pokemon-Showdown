@@ -313,7 +313,7 @@ export const Scripts: ModdedBattleScriptsData = {
 					if (!pokemon.volatiles['lockedmove'].time) {
 						// Confusion begins even if already confused.
 						// Remove lockedmove volatile when dealing with after move effects.
-						delete pokemon.volatiles['confusion'];
+						pokemon.removeVolatile('confusion');
 						pokemon.addVolatile('confusion', pokemon, this.dex.conditions.get('lockedmove'));
 					}
 				} else {
@@ -448,7 +448,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			// The move missed.
 			if (damage === false) {
 				// Delete the partial trap lock if necessary.
-				delete pokemon.volatiles['partialtrappinglock'];
+				pokemon.removeVolatile('partialtrappinglock');
 				return false;
 			}
 

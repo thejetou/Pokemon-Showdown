@@ -385,7 +385,9 @@ export const Scripts: ModdedBattleScriptsData = {
 				if (!rawSpecies) continue;
 				const species = pokemon.setSpecies(rawSpecies);
 				if (!species) continue;
+				this.removeListenersFrom(pokemon.baseSpecies, pokemon);
 				pokemon.baseSpecies = rawSpecies;
+				this.addListenersFrom(pokemon.baseSpecies, pokemon, pokemon.speciesState, () => {});
 				pokemon.details = pokemon.getUpdatedDetails();
 				// pokemon.setAbility(species.abilities['0'], null, null, true);
 				// pokemon.baseAbility = pokemon.ability;
@@ -518,6 +520,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			action.target.fainted = false;
 			action.target.faintQueued = false;
 			action.target.subFainted = false;
+			this.removeListenersFrom(action.target.getStatus(), action.target);
 			action.target.status = '';
 			action.target.hp = 1; // Needed so hp functions works
 			action.target.sethp(action.target.maxhp / 2);
@@ -1242,7 +1245,7 @@ export const Scripts: ModdedBattleScriptsData = {
 					this.runMove(move.id, dancer, dancersTargetLoc, { sourceEffect: dancer.getAbility(), externalMove: true });
 				}
 			}
-			if (noLock && pokemon.volatiles['lockedmove']) delete pokemon.volatiles['lockedmove'];
+			if (noLock && pokemon.volatiles['lockedmove']) pokemon.removeVolatile('lockedmove');
 			this.battle.faintMessages();
 			this.battle.checkWin();
 

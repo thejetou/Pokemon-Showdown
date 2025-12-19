@@ -150,8 +150,10 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				delete foeAlly.m.innate;
 			}
 
+			this.removeListenersFrom(source.getAbility(), source);
 			source.ability = targetAbility.id;
 			source.abilityState = this.initEffectState({ id: this.toID(source.ability), target: source });
+			this.addListenersFrom(source.getAbility(), source, source.abilityState, source.clearAbility);
 			if (source.m.innate?.endsWith(targetAbility.id)) {
 				source.removeVolatile(source.m.innate);
 				delete source.m.innate;
@@ -165,8 +167,10 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				ally.addVolatile(ally.m.innate);
 			}
 
+			this.removeListenersFrom(target.getAbility(), target);
 			target.ability = sourceAbility.id;
 			target.abilityState = this.initEffectState({ id: this.toID(target.ability), target });
+			this.addListenersFrom(target.getAbility(), target, target.abilityState, target.clearAbility);
 			if (target.m.innate?.endsWith(sourceAbility.id)) {
 				target.removeVolatile(target.m.innate);
 				delete target.m.innate;

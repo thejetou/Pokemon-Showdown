@@ -556,7 +556,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			onResidual(target) {
 				if (target.status === 'slp') {
 					// don't lock, and bypass confusion for calming
-					delete target.volatiles['bloodsoakedcrescent'];
+					target.removeVolatile('bloodsoakedcrescent');
 				}
 				this.effectState.trueDuration--;
 			},

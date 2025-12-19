@@ -709,11 +709,11 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 					}
 					if (pokemon.volatiles['magnetrise']) {
 						applies = true;
-						delete pokemon.volatiles['magnetrise'];
+						pokemon.removeVolatile('magnetrise');
 					}
 					if (pokemon.volatiles['telekinesis']) {
 						applies = true;
-						delete pokemon.volatiles['telekinesis'];
+						pokemon.removeVolatile('telekinesis');
 					}
 					if (applies) this.add('-activate', pokemon, 'move: Gravity');
 				}
@@ -1641,7 +1641,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			onStart(target) {
 				this.add('-start', target, 'Substitute');
 				this.effectState.hp = Math.floor(target.maxhp / 4);
-				delete target.volatiles['partiallytrapped'];
+				target.removeVolatile('partiallytrapped');
 			},
 			onTryPrimaryHitPriority: -1,
 			onTryPrimaryHit(target, source, move) {
@@ -1882,7 +1882,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				}
 				if (target.lastMove && target.lastMove.id === 'struggle') {
 					// don't lock
-					delete target.volatiles['uproar'];
+					target.removeVolatile('uproar');
 				}
 				this.add('-start', target, 'Uproar', '[upkeep]');
 			},

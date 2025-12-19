@@ -797,7 +797,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			onStart(target) {
 				this.add('-start', target, 'Substitute');
 				this.effectState.hp = Math.floor(target.maxhp / 4) + 1;
-				delete target.volatiles['partiallytrapped'];
+				target.removeVolatile('partiallytrapped');
 			},
 			onTryHitPriority: -1,
 			onTryHit(target, source, move) {

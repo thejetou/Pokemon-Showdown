@@ -355,7 +355,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				this.debug(`Ally Switch success chance: ${Math.round(100 / counter)}%`);
 				const success = this.randomChance(1, counter);
 				if (!success) {
-					delete pokemon.volatiles['allyswitch'];
+					pokemon.removeVolatile('allyswitch');
 					return false;
 				}
 				if (this.effectState.counter < (this.effect as Condition).counterMax!) {
@@ -1053,7 +1053,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (this.checkMoveMakesContact(move, source, target)) {
@@ -2124,7 +2124,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (this.checkMoveMakesContact(move, source, target)) {
@@ -3158,6 +3158,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 					for (const id in side.sideConditions) {
 						if (!sideConditions.includes(id)) continue;
 						temp[side.n][id] = side.sideConditions[id];
+						this.removeListenersFrom(this.dex.conditions.get(id), side);
 						delete side.sideConditions[id];
 						success = true;
 					}
@@ -3168,6 +3169,9 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 					for (const id in sourceSideConditions) {
 						targetSide.sideConditions[id] = sourceSideConditions[id];
 						targetSide.sideConditions[id].target = targetSide;
+						this.addListenersFrom(
+							this.dex.conditions.get(id), targetSide, targetSide.sideConditions[id], targetSide.removeSideCondition
+						);
 					}
 				}
 			} else {
@@ -3178,22 +3182,30 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				for (const id in sourceSideConditions) {
 					if (!sideConditions.includes(id)) continue;
 					sourceTemp[id] = sourceSideConditions[id];
+					this.removeListenersFrom(this.dex.conditions.get(id), source.side);
 					delete sourceSideConditions[id];
 					success = true;
 				}
 				for (const id in targetSideConditions) {
 					if (!sideConditions.includes(id)) continue;
 					targetTemp[id] = targetSideConditions[id];
+					this.removeListenersFrom(this.dex.conditions.get(id), source.side.foe);
 					delete targetSideConditions[id];
 					success = true;
 				}
 				for (const id in sourceTemp) {
 					targetSideConditions[id] = sourceTemp[id];
 					targetSideConditions[id].target = source.side.foe;
+					this.addListenersFrom(
+						this.dex.conditions.get(id), source.side.foe, targetSideConditions[id], source.side.foe.removeSideCondition
+					);
 				}
 				for (const id in targetTemp) {
 					sourceSideConditions[id] = targetTemp[id];
 					sourceSideConditions[id].target = source.side;
+					this.addListenersFrom(
+						this.dex.conditions.get(id), source.side, sourceSideConditions[id], source.side.removeSideCondition
+					);
 				}
 			}
 			if (!success) return false;
@@ -8075,11 +8087,11 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 					}
 					if (pokemon.volatiles['magnetrise']) {
 						applies = true;
-						delete pokemon.volatiles['magnetrise'];
+						pokemon.removeVolatile('magnetrise');
 					}
 					if (pokemon.volatiles['telekinesis']) {
 						applies = true;
-						delete pokemon.volatiles['telekinesis'];
+						pokemon.removeVolatile('telekinesis');
 					}
 					if (applies) this.add('-activate', pokemon, 'move: Gravity');
 				}
@@ -9633,7 +9645,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 			onResidual(target) {
 				if (target.lastMove && target.lastMove.id === 'struggle') {
 					// don't lock
-					delete target.volatiles['iceball'];
+					target.removeVolatile('iceball');
 				}
 			},
 		},
@@ -10306,7 +10318,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (this.checkMoveMakesContact(move, source, target)) {
@@ -11424,7 +11436,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				return this.NOT_FAIL;
@@ -11604,7 +11616,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				return this.NOT_FAIL;
@@ -13376,7 +13388,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (this.checkMoveMakesContact(move, source, target)) {
@@ -13452,7 +13464,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 			onResidual(pokemon) {
 				const source = this.effectState.source;
 				if (source && (!source.isActive || source.hp <= 0 || !source.activeTurns)) {
-					delete pokemon.volatiles['octolock'];
+					pokemon.removeVolatile('octolock');
 					this.add('-end', pokemon, 'Octolock', '[partiallytrapped]', '[silent]');
 					return;
 				}
@@ -14507,7 +14519,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				return this.NOT_FAIL;
@@ -15058,7 +15070,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				return this.NOT_FAIL;
@@ -15992,7 +16004,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 			onResidual(target) {
 				if (target.lastMove && target.lastMove.id === 'struggle') {
 					// don't lock
-					delete target.volatiles['rollout'];
+					target.removeVolatile('rollout');
 				}
 			},
 		},
@@ -17049,7 +17061,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (this.checkMoveMakesContact(move, source, target)) {
@@ -17234,10 +17246,14 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 			}
 			this.singleEvent('End', sourceAbility, source.abilityState, source);
 			this.singleEvent('End', targetAbility, target.abilityState, target);
+			this.removeListenersFrom(source.getAbility(), source);
+			this.removeListenersFrom(target.getAbility(), target);
 			source.ability = targetAbility.id;
 			target.ability = sourceAbility.id;
 			source.abilityState = this.initEffectState({ id: this.toID(source.ability), target: source });
 			target.abilityState = this.initEffectState({ id: this.toID(target.ability), target });
+			this.addListenersFrom(source.getAbility(), source, source.abilityState, source.clearAbility);
+			this.addListenersFrom(target.getAbility(), target, target.abilityState, target.clearAbility);
 			source.volatileStaleness = undefined;
 			if (!target.isAlly(source)) target.volatileStaleness = 'external';
 			this.singleEvent('Start', targetAbility, source.abilityState, source);
@@ -17627,11 +17643,11 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				}
 				if (pokemon.volatiles['magnetrise']) {
 					applies = true;
-					delete pokemon.volatiles['magnetrise'];
+					pokemon.removeVolatile('magnetrise');
 				}
 				if (pokemon.volatiles['telekinesis']) {
 					applies = true;
-					delete pokemon.volatiles['telekinesis'];
+					pokemon.removeVolatile('telekinesis');
 				}
 				if (!applies) return false;
 				this.add('-start', pokemon, 'Smack Down');
@@ -18037,7 +18053,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 		onAfterMove(source, target, move) {
 			if (source.fainted || !move.hitTargets || move.hasSheerForce) {
 				// make sure the volatiles are cleared
-				for (const pokemon of this.getAllActive()) delete pokemon.volatiles['sparklingaria'];
+				for (const pokemon of this.getAllActive()) pokemon.removeVolatile('sparklingaria');
 				return;
 			}
 			const numberTargets = move.hitTargets.length;
@@ -18241,7 +18257,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (this.checkMoveMakesContact(move, source, target)) {
@@ -19041,7 +19057,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				this.effectState.hp = Math.floor(target.maxhp / 4);
 				if (target.volatiles['partiallytrapped']) {
 					this.add('-end', target, target.volatiles['partiallytrapped'].sourceEffect, '[partiallytrapped]', '[silent]');
-					delete target.volatiles['partiallytrapped'];
+					target.removeVolatile('partiallytrapped');
 				}
 			},
 			onTryPrimaryHitPriority: -1,
@@ -19893,7 +19909,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 			},
 			onUpdate(pokemon) {
 				if (pokemon.baseSpecies.name === 'Gengar-Mega') {
-					delete pokemon.volatiles['telekinesis'];
+					pokemon.removeVolatile('telekinesis');
 					this.add('-end', pokemon, 'Telekinesis', '[silent]');
 				}
 			},
@@ -20471,7 +20487,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 			noCopy: true,
 			onStart(pokemon, source, effect) {
 				if (pokemon.volatiles['dynamax']) {
-					delete pokemon.volatiles['torment'];
+					pokemon.removeVolatile('torment');
 					return false;
 				}
 				if (effect?.id === 'gmaxmeltdown') this.effectState.duration = 3;
@@ -21022,7 +21038,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				}
 				if (target.lastMove && target.lastMove.id === 'struggle') {
 					// don't lock
-					delete target.volatiles['uproar'];
+					target.removeVolatile('uproar');
 				}
 				this.add('-start', target, 'Uproar', '[upkeep]');
 			},
@@ -21647,7 +21663,7 @@ export const Moves: import('../sim/dex-moves').MoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				return this.NOT_FAIL;

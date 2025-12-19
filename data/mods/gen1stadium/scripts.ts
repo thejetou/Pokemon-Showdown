@@ -142,7 +142,7 @@ export const Scripts: ModdedBattleScriptsData = {
 
 					// If target fainted
 					if (target && target.hp <= 0) {
-						delete pokemon.volatiles['partialtrappinglock'];
+						pokemon.removeVolatile('partialtrappinglock');
 					} else {
 						this.battle.runEvent('AfterMoveSelf', pokemon, target, move);
 					}
@@ -271,7 +271,7 @@ export const Scripts: ModdedBattleScriptsData = {
 					accuracy = true;
 				} else if (pokemon.volatiles['partialtrappinglock'].locked !== target) {
 					// The target switched, therefor, you fail using wrap.
-					delete pokemon.volatiles['partialtrappinglock'];
+					pokemon.removeVolatile('partialtrappinglock');
 					return false;
 				}
 			}
@@ -360,7 +360,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			// The move missed.
 			if (damage === false) {
 				// Delete the partial trap lock if necessary.
-				delete pokemon.volatiles['partialtrappinglock'];
+				pokemon.removeVolatile('partialtrappinglock');
 				return false;
 			}
 

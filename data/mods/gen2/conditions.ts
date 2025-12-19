@@ -107,6 +107,7 @@ export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDa
 		onSwitchIn(pokemon) {
 			// Regular poison status and damage after a switchout -> switchin.
 			pokemon.status = 'psn' as ID;
+			this.addListenersFrom(pokemon.getStatus(), pokemon, pokemon.statusState, pokemon.clearStatus);
 			this.add('-status', pokemon, 'psn', '[silent]');
 		},
 		onAfterSwitchInSelf(pokemon) {
@@ -171,7 +172,7 @@ export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDa
 		onResidual(target) {
 			if ((target.lastMove && target.lastMove.id === 'struggle') || target.status === 'slp') {
 				// don't lock, and bypass confusion for calming
-				delete target.volatiles['lockedmove'];
+				target.removeVolatile('lockedmove');
 			}
 		},
 		onStart(target, source, effect) {
@@ -184,14 +185,14 @@ export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDa
 		},
 		onEnd(target) {
 			// Confusion begins even if already confused
-			delete target.volatiles['confusion'];
+			target.removeVolatile('confusion');
 			if (!target.side.getSideCondition('safeguard')) target.addVolatile('confusion');
 		},
 		onLockMove(pokemon) {
 			return this.effectState.move;
 		},
 		onMoveAborted(pokemon) {
-			delete pokemon.volatiles['lockedmove'];
+			pokemon.removeVolatile('lockedmove');
 		},
 		onBeforeTurn(pokemon) {
 			const move = this.dex.moves.get(this.effectState.move);

@@ -66,6 +66,7 @@ export class Field {
 		}
 		const prevWeather = this.weather;
 		const prevWeatherState = this.weatherState;
+		this.battle.removeListenersFrom(this.getWeather(), this);
 		this.weather = status.id;
 		this.weatherState = this.battle.initEffectState({ id: status.id });
 		if (source) {
@@ -79,9 +80,14 @@ export class Field {
 			if (!source) throw new Error(`setting weather without a source`);
 			this.weatherState.duration = status.durationCallback.call(this.battle, source, source, sourceEffect);
 		}
+		this.battle.addListenersFrom(status, this, this.weatherState, this.clearWeather);
 		if (!this.battle.singleEvent('FieldStart', status, this.weatherState, this, source, sourceEffect)) {
 			this.weather = prevWeather;
 			this.weatherState = prevWeatherState;
+			this.battle.removeListenersFrom(status, this);
+			this.battle.addListenersFrom(
+				this.battle.dex.conditions.getByID(prevWeather), this, prevWeatherState, this.clearWeather
+			);
 			return false;
 		}
 		this.battle.eachEvent('WeatherChange', sourceEffect);
@@ -94,6 +100,7 @@ export class Field {
 		this.battle.singleEvent('FieldEnd', prevWeather, this.weatherState, this);
 		this.weather = '';
 		this.battle.clearEffectState(this.weatherState);
+		this.battle.removeListenersFrom(prevWeather, this);
 		this.battle.eachEvent('WeatherChange');
 		return true;
 	}
@@ -137,6 +144,7 @@ export class Field {
 		if (this.terrain === status.id) return false;
 		const prevTerrain = this.terrain;
 		const prevTerrainState = this.terrainState;
+		this.battle.removeListenersFrom(this.getTerrain(), this);
 		this.terrain = status.id;
 		this.terrainState = this.battle.initEffectState({
 			id: status.id,
@@ -147,9 +155,14 @@ export class Field {
 		if (status.durationCallback) {
 			this.terrainState.duration = status.durationCallback.call(this.battle, source, source, sourceEffect);
 		}
+		this.battle.addListenersFrom(status, this, this.terrainState, this.clearTerrain);
 		if (!this.battle.singleEvent('FieldStart', status, this.terrainState, this, source, sourceEffect)) {
 			this.terrain = prevTerrain;
 			this.terrainState = prevTerrainState;
+			this.battle.removeListenersFrom(status, this);
+			this.battle.addListenersFrom(
+				this.battle.dex.conditions.getByID(prevTerrain), this, prevTerrainState, this.clearTerrain
+			);
 			return false;
 		}
 		this.battle.eachEvent('TerrainChange', sourceEffect);
@@ -162,6 +175,7 @@ export class Field {
 		this.battle.singleEvent('FieldEnd', prevTerrain, this.terrainState, this);
 		this.terrain = '';
 		this.battle.clearEffectState(this.terrainState);
+		this.battle.removeListenersFrom(prevTerrain, this);
 		this.battle.eachEvent('TerrainChange');
 		return true;
 	}
@@ -207,7 +221,9 @@ export class Field {
 			if (!source) throw new Error(`setting fieldcond without a source`);
 			state.duration = status.durationCallback.call(this.battle, source, source, sourceEffect);
 		}
+		this.battle.addListenersFrom(status, this, state, this.removePseudoWeather);
 		if (!this.battle.singleEvent('FieldStart', status, state, this, source, sourceEffect)) {
+			this.battle.removeListenersFrom(status, this);
 			delete this.pseudoWeather[status.id];
 			return false;
 		}
@@ -225,6 +241,7 @@ export class Field {
 		const state = this.pseudoWeather[status.id];
 		if (!state) return false;
 		this.battle.singleEvent('FieldEnd', status, state, this);
+		this.battle.removeListenersFrom(status, this);
 		delete this.pseudoWeather[status.id];
 		return true;
 	}

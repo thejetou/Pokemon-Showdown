@@ -2856,7 +2856,7 @@ export const Abilities: import('../sim/dex-abilities').AbilityDataTable = {
 					this.singleEvent('End', this.dex.abilities.get('Illusion'), target.abilityState, target, pokemon, 'neutralizinggas');
 				}
 				if (target.volatiles['slowstart']) {
-					delete target.volatiles['slowstart'];
+					target.removeVolatile('slowstart');
 					this.add('-end', target, 'Slow Start', '[silent]');
 				}
 				if (strongWeathers.includes(target.getAbility().id)) {
@@ -3444,7 +3444,7 @@ export const Abilities: import('../sim/dex-abilities').AbilityDataTable = {
 			}
 		},
 		onEnd(pokemon) {
-			delete pokemon.volatiles['protosynthesis'];
+			pokemon.removeVolatile('protosynthesis');
 			this.add('-end', pokemon, 'Protosynthesis', '[silent]');
 		},
 		condition: {
@@ -3580,7 +3580,7 @@ export const Abilities: import('../sim/dex-abilities').AbilityDataTable = {
 			}
 		},
 		onEnd(pokemon) {
-			delete pokemon.volatiles['quarkdrive'];
+			pokemon.removeVolatile('quarkdrive');
 			this.add('-end', pokemon, 'Quark Drive', '[silent]');
 		},
 		condition: {
@@ -5524,7 +5524,7 @@ export const Abilities: import('../sim/dex-abilities').AbilityDataTable = {
 		onEnd(pokemon) {
 			if (!pokemon.volatiles['zenmode'] || !pokemon.hp) return;
 			pokemon.transformed = false;
-			delete pokemon.volatiles['zenmode'];
+			pokemon.removeVolatile('zenmode');
 			if (pokemon.species.baseSpecies === 'Darmanitan' && pokemon.species.battleOnly) {
 				pokemon.formeChange(pokemon.species.battleOnly as string, this.effect, false, '0', '[silent]');
 			}

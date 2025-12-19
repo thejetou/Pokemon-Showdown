@@ -1219,6 +1219,7 @@ export class Pokemon {
 			if (this.battle.dex.conditions.getByID(i as ID).noCopy) continue;
 			// shallow clones
 			this.volatiles[i] = this.battle.initEffectState({ ...pokemon.volatiles[i], target: this });
+			this.battle.addListenersFrom(this.battle.dex.conditions.get(i), this, this.volatiles[i], this.removeVolatile);
 			if (this.volatiles[i].linkedPokemon) {
 				delete pokemon.volatiles[i].linkedPokemon;
 				delete pokemon.volatiles[i].linkedStatus;
@@ -1405,7 +1406,9 @@ export class Pokemon {
 		const apparentSpecies =
 			this.illusion ? this.illusion.species.name : species.baseSpecies;
 		if (isPermanent) {
+			this.battle.removeListenersFrom(this.baseSpecies, this);
 			this.baseSpecies = rawSpecies;
+			this.battle.addListenersFrom(this.baseSpecies, this, this.speciesState, () => {});
 			this.details = this.getUpdatedDetails();
 			let details = (this.illusion || this).details;
 			if (this.terastallized) details += `, tera:${this.terastallized}`;
@@ -1422,7 +1425,7 @@ export class Pokemon {
 					this.moveThisTurnResult = true; // Ultra Burst counts as an action for Truant
 				} else if (source.isPrimalOrb) {
 					if (this.illusion) {
-						this.ability = '';
+						this.clearAbility();
 						this.battle.add('-primal', this.illusion, species.requiredItem);
 					} else {
 						this.battle.add('-primal', this, species.requiredItem);
@@ -1446,7 +1449,7 @@ export class Pokemon {
 		if (isPermanent && (!source || !['disguise', 'iceface'].includes(source.id))) {
 			if (this.illusion && source) {
 				// Tera forme by Ogerpon or Terapagos breaks the Illusion
-				this.ability = ''; // Don't allow Illusion to wear off
+				this.clearAbility();// Don't allow Illusion to wear off
 			}
 			const ability = species.abilities[abilitySlot] || species.abilities['0'];
 			// Ogerpon's forme change doesn't override permanent abilities
@@ -1502,9 +1505,15 @@ export class Pokemon {
 			}
 		}
 		if (this.species.name === 'Eternatus-Eternamax' && this.volatiles['dynamax']) {
+			this.battle.removeListenersFrom(null, this);
+			this.battle.addListenersFrom(
+				this.battle.dex.conditions.get('dynamax'), this,
+				this.volatiles['dynamax'], this.removeVolatile
+			);
 			this.volatiles = { dynamax: this.volatiles['dynamax'] };
 		} else {
 			this.volatiles = {};
+			this.battle.removeListenersFrom(null, this);
 		}
 		if (includeSwitchFlags) {
 			this.switchFlag = false;
@@ -1650,6 +1659,7 @@ export class Pokemon {
 		if (this.status === 'slp' && this.removeVolatile('nightmare')) {
 			this.battle.add('-end', this, 'Nightmare', '[silent]');
 		}
+		this.battle.removeListenersFrom(this.getStatus(), this);
 		this.setStatus('');
 		return true;
 	}
@@ -1707,12 +1717,15 @@ export class Pokemon {
 		if (status.durationCallback) {
 			this.statusState.duration = status.durationCallback.call(this.battle, this, source, sourceEffect);
 		}
+		this.battle.addListenersFrom(status, this, this.statusState, this.clearStatus);
 
 		if (status.id && !this.battle.singleEvent('Start', status, this.statusState, this, source, sourceEffect)) {
 			this.battle.debug('status start [' + status.id + '] interrupted');
+			this.battle.removeListenersFrom(status, this);
 			// cancel the setstatus
 			this.status = prevStatus;
 			this.statusState = prevStatusState;
+			this.battle.addListenersFrom(this.battle.dex.conditions.get(prevStatus), this, prevStatusState, this.clearStatus);
 			return false;
 		}
 		if (status.id && !this.battle.runEvent('AfterSetStatus', this, source, sourceEffect, status)) {
@@ -1729,6 +1742,7 @@ export class Pokemon {
 		if (this.status === 'slp' && this.removeVolatile('nightmare')) {
 			this.battle.add('-end', this, 'Nightmare', '[silent]');
 		}
+		this.battle.removeListenersFrom(this.getStatus(), this);
 		this.setStatus('');
 		return true;
 	}
@@ -1768,7 +1782,7 @@ export class Pokemon {
 				}
 				this.pendingStaleness = undefined;
 			}
-
+			this.battle.removeListenersFrom(this.getItem(), this);
 			this.lastItem = this.item;
 			this.item = '';
 			this.battle.clearEffectState(this.itemState);
@@ -1810,6 +1824,7 @@ export class Pokemon {
 
 			this.battle.singleEvent('Use', item, this.itemState, this, source, sourceEffect);
 
+			this.battle.removeListenersFrom(this.getItem(), this);
 			this.lastItem = this.item;
 			this.item = '';
 			this.battle.clearEffectState(this.itemState);
@@ -1830,6 +1845,7 @@ export class Pokemon {
 		}
 		const item = this.getItem();
 		if (this.battle.runEvent('TakeItem', this, source, null, item)) {
+			this.battle.removeListenersFrom(this.getItem(), this);
 			this.item = '';
 			const oldItemState = this.itemState;
 			this.battle.clearEffectState(this.itemState);
@@ -1857,8 +1873,14 @@ export class Pokemon {
 		const oldItemState = this.itemState;
 		this.item = item.id;
 		this.itemState = this.battle.initEffectState({ id: item.id, target: this });
-		if (oldItem.exists) this.battle.singleEvent('End', oldItem, oldItemState, this);
+		if (oldItem) {
+			this.battle.removeListenersFrom(oldItem, this);
+		}
+		if (oldItem.exists) {
+			this.battle.singleEvent('End', oldItem, oldItemState, this);
+		}
 		if (item.id) {
+			this.battle.addListenersFrom(item, this, this.itemState, this.clearItem);
 			this.battle.singleEvent('Start', item, this.itemState, this, source, effect);
 		}
 		return true;
@@ -1878,6 +1900,7 @@ export class Pokemon {
 	}
 
 	clearItem() {
+		this.battle.removeListenersFrom(this.getItem(), this);
 		return this.setItem('');
 	}
 
@@ -1897,8 +1920,12 @@ export class Pokemon {
 			if (!setAbilityEvent) return setAbilityEvent;
 		}
 		this.battle.singleEvent('End', oldAbility, this.abilityState, this, source);
+		if (oldAbility) {
+			this.battle.removeListenersFrom(this.getAbility(), this);
+		}
 		this.ability = ability.id;
 		this.abilityState = this.battle.initEffectState({ id: ability.id, target: this });
+		this.battle.addListenersFrom(ability, this, this.abilityState, this.clearAbility);
 		if (sourceEffect && !isFromFormeChange && !isTransform) {
 			if (source) {
 				this.battle.add('-ability', this, ability.name, oldAbility.name, `[from] ${sourceEffect.fullname}`, `[of] ${source}`);
@@ -1927,6 +1954,7 @@ export class Pokemon {
 	}
 
 	clearAbility() {
+		this.battle.removeListenersFrom(this.getAbility(), this);
 		return this.setAbility('');
 	}
 
@@ -1974,10 +2002,12 @@ export class Pokemon {
 		if (status.durationCallback) {
 			this.volatiles[status.id].duration = status.durationCallback.call(this.battle, this, source, sourceEffect);
 		}
+		this.battle.addListenersFrom(status, this, this.volatiles[status.id], this.removeVolatile);
 		result = this.battle.singleEvent('Start', status, this.volatiles[status.id], this, source, sourceEffect);
 		if (!result) {
 			// cancel
 			delete this.volatiles[status.id];
+			this.battle.removeListenersFrom(status, this);
 			return result;
 		}
 		if (linkedStatus && source) {
@@ -2010,6 +2040,7 @@ export class Pokemon {
 		if (linkedPokemon) {
 			this.removeLinkedVolatiles(linkedStatus, linkedPokemon);
 		}
+		this.battle.removeListenersFrom(status, this);
 		return true;
 	}
 

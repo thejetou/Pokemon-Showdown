@@ -1089,7 +1089,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				let statDebuff = 'spe';
@@ -1204,7 +1204,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				if (!source.volatiles['disable']) {
@@ -3681,7 +3681,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			this.add('-activate', source, 'move: Plagiarism', move.name);
 			this.add('-message', `${source.name} plagiarised ${target.name}'s ${move.name}!`);
 			this.actions.useMove(move.id, source, { target });
-			delete target.volatiles['imprison'];
+			target.removeVolatile('imprison');
 			source.addVolatile('imprison', source);
 			source.m.usedPlagiarism = true;
 		},
@@ -4087,7 +4087,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (lockedmove) {
 					// Outrage counter is reset
 					if (source.volatiles['lockedmove'].duration === 2) {
-						delete source.volatiles['lockedmove'];
+						source.removeVolatile('lockedmove');
 					}
 				}
 				return this.NOT_FAIL;
@@ -6957,15 +6957,15 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 					}
 					if (pokemon.volatiles['magnetrise']) {
 						applies = true;
-						delete pokemon.volatiles['magnetrise'];
+						pokemon.removeVolatile('magnetrise');
 					}
 					if (pokemon.volatiles['riseabove']) {
 						applies = true;
-						delete pokemon.volatiles['riseabove'];
+						pokemon.removeVolatile('riseabove');
 					}
 					if (pokemon.volatiles['telekinesis']) {
 						applies = true;
-						delete pokemon.volatiles['telekinesis'];
+						pokemon.removeVolatile('telekinesis');
 					}
 					if (applies) this.add('-activate', pokemon, 'move: Gravity');
 				}

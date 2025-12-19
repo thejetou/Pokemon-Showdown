@@ -456,7 +456,7 @@ export const Scripts: ModdedBattleScriptsData = {
 						{ sourceEffect: this.dex.abilities.get('dancer'), externalMove: true });
 				}
 			}
-			if (noLock && pokemon.volatiles['lockedmove']) delete pokemon.volatiles['lockedmove'];
+			if (noLock && pokemon.volatiles['lockedmove']) pokemon.removeVolatile('lockedmove');
 			this.battle.faintMessages();
 			this.battle.checkWin();
 		},

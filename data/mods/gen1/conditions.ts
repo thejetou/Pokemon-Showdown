@@ -177,7 +177,7 @@ export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDa
 		noCopy: true,
 		onTrapPokemon(pokemon) {
 			if (!this.effectState.source?.isActive) {
-				delete pokemon.volatiles['trapped'];
+				pokemon.removeVolatile('trapped');
 				return;
 			}
 			pokemon.trapped = true;
@@ -244,7 +244,7 @@ export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDa
 		},
 		onAfterMove(pokemon, target, move) {
 			if (target && target.hp <= 0) {
-				delete pokemon.volatiles['partialtrappinglock'];
+				pokemon.removeVolatile('partialtrappinglock');
 				return;
 			}
 			if (this.effectState.duration === 1) {
@@ -272,7 +272,7 @@ export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDa
 		onStart() {},
 		onAfterMove(pokemon, target, move) {
 			if (target && target.hp <= 0) {
-				delete pokemon.volatiles['mustrecharge'];
+				pokemon.removeVolatile('mustrecharge');
 				return;
 			}
 			this.add('-mustrecharge', pokemon);

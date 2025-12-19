@@ -62,10 +62,13 @@ export const Scripts: ModdedBattleScriptsData = {
 				const rawSpecies = (this.actions as any).getMixedSpecies(pokemon.m.originalSpecies, item.forcedForme, pokemon);
 				const species = pokemon.setSpecies(rawSpecies);
 				if (!species) continue;
+				this.removeListenersFrom(pokemon.baseSpecies, pokemon);
 				pokemon.baseSpecies = rawSpecies;
 				pokemon.details = pokemon.getUpdatedDetails();
+				this.removeListenersFrom(pokemon.getAbility(), pokemon);
 				pokemon.ability = this.toID(species.abilities['0']);
 				pokemon.baseAbility = pokemon.ability;
+				this.addListenersFrom(pokemon.getAbility(), pokemon, pokemon.abilityState, pokemon.clearAbility);
 			}
 		}
 
@@ -113,10 +116,13 @@ export const Scripts: ModdedBattleScriptsData = {
 				if (!rawSpecies) continue;
 				const species = pokemon.setSpecies(rawSpecies);
 				if (!species) continue;
+				this.removeListenersFrom(pokemon.baseSpecies, pokemon);
 				pokemon.baseSpecies = rawSpecies;
 				pokemon.details = pokemon.getUpdatedDetails();
+				this.removeListenersFrom(pokemon.getAbility(), pokemon);
 				pokemon.ability = this.toID(species.abilities['0']);
 				pokemon.baseAbility = pokemon.ability;
+				this.addListenersFrom(pokemon.getAbility(), pokemon, pokemon.abilityState, pokemon.clearAbility);
 
 				const behemothMove: { [k: string]: string } = {
 					'Rusted Sword': 'behemothblade', 'Rusted Shield': 'behemothbash',
@@ -246,6 +252,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			action.target.fainted = false;
 			action.target.faintQueued = false;
 			action.target.subFainted = false;
+			this.removeListenersFrom(action.target.getStatus(), action.target);
 			action.target.status = '';
 			action.target.hp = 1; // Needed so hp functions works
 			action.target.sethp(action.target.maxhp / 2);

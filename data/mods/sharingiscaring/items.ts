@@ -8,7 +8,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 				target.item = '';
 				this.clearEffectState(target.itemState);
 			} else {
-				delete target.volatiles['item:airballoon'];
+				target.removeVolatile('item:airballoon');
 				target.m.sharedItemsUsed.push('airballoon');
 			}
 			this.runEvent('AfterUseItem', target, null, null, this.dex.items.get('airballoon'));
@@ -21,7 +21,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 					target.item = '';
 					this.clearEffectState(target.itemState);
 				} else {
-					delete target.volatiles['item:airballoon'];
+					target.removeVolatile('item:airballoon');
 					target.m.sharedItemsUsed.push('airballoon');
 				}
 				this.runEvent('AfterUseItem', target, null, null, this.dex.items.get('airballoon'));

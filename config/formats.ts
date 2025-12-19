@@ -706,6 +706,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			for (const ability of format.getSharedPower!(pokemon)) {
 				const effect = 'ability:' + this.toID(ability);
 				pokemon.volatiles[effect] = this.initEffectState({ id: effect, target: pokemon });
+				this.addListenersFrom(this.dex.conditions.get(effect), pokemon, pokemon.volatiles[effect], pokemon.removeVolatile);
 				if (!pokemon.m.abils) pokemon.m.abils = [];
 				if (!pokemon.m.abils.includes(effect)) pokemon.m.abils.push(effect);
 			}
@@ -765,6 +766,14 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 					if (this.turn & 1 && pokemon.position === (this.turn & 2 ? 0 : 1) && pokemon.hp && pokemon.allies().length) {
 						pokemon.volatiles['commanding'] = this.initEffectState({ id: 'commanding', name: 'Commanding', target: pokemon });
 						pokemon.volatiles['gastroacid'] = this.initEffectState({ id: 'gastroacid', name: 'Gastro Acid', target: pokemon });
+						this.addListenersFrom(
+							this.dex.conditions.get('commanding'), pokemon,
+							pokemon.volatiles['commanding'], pokemon.removeVolatile
+						);
+						this.addListenersFrom(
+							this.dex.conditions.get('gastroacid'), pokemon,
+							pokemon.volatiles['gastroacid'], pokemon.removeVolatile
+						);
 						this.add('-message', `${pokemon.side.name}'s ${pokemon.name !== pokemon.species.name ? `${pokemon.name} (${pokemon.species.name})` : pokemon.name} will be skipped next turn.`);
 					} else {
 						pokemon.removeVolatile('commanding');
@@ -1166,6 +1175,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				const move = this.dex.getActiveMove(pokemon.set.item);
 				if (move.exists && move.category !== 'Status') {
 					pokemon.m.forte = move;
+					this.removeListenersFrom(pokemon.getItem(), this);
 					pokemon.item = 'mail' as ID;
 				}
 			}
@@ -1596,12 +1606,20 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 					pokemon.m.innate = 'ability:' + ally.ability;
 					if (!ngas || ally.getAbility().flags['cantsuppress'] || pokemon.hasItem('Ability Shield')) {
 						pokemon.volatiles[pokemon.m.innate] = this.initEffectState({ id: pokemon.m.innate, target: pokemon, pic: ally });
+						this.addListenersFrom(
+							this.dex.conditions.get(pokemon.m.innate), pokemon,
+							pokemon.volatiles[pokemon.m.innate], pokemon.removeVolatile
+						);
 					}
 				}
 				if (!ally.m.innate && !BAD_ABILITIES.includes(this.toID(pokemon.ability))) {
 					ally.m.innate = 'ability:' + pokemon.ability;
 					if (!ngas || pokemon.getAbility().flags['cantsuppress'] || ally.hasItem('Ability Shield')) {
 						ally.volatiles[ally.m.innate] = this.initEffectState({ id: ally.m.innate, target: ally, pic: pokemon });
+						this.addListenersFrom(
+							this.dex.conditions.get(ally.m.innate), ally,
+							ally.volatiles[ally.m.innate], ally.removeVolatile
+						);
 					}
 				}
 			}
@@ -1690,6 +1708,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 					if (pokemon.hasAbility(innate)) continue;
 					const effect = 'ability:' + this.toID(innate);
 					pokemon.volatiles[effect] = this.initEffectState({ id: effect, target: pokemon });
+					this.addListenersFrom(this.dex.conditions.get(effect), pokemon, pokemon.volatiles[effect], pokemon.removeVolatile);
 				}
 			}
 		},
@@ -1950,6 +1969,9 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				}
 				pokemon.abilityState = this.battle.initEffectState({ id: pokemon.ability, target: pokemon });
 				pokemon.itemState = this.battle.initEffectState({ id: pokemon.item, target: pokemon });
+				this.battle.addListenersFrom(pokemon.getStatus(), pokemon, pokemon.statusState, pokemon.clearStatus);
+				this.battle.addListenersFrom(pokemon.getItem(), pokemon, pokemon.itemState, pokemon.clearItem);
+				this.battle.addListenersFrom(pokemon.getAbility(), pokemon, pokemon.abilityState, pokemon.clearAbility);
 				this.battle.runEvent('BeforeSwitchIn', pokemon);
 				if (sourceEffect) {
 					this.battle.add(isDrag ? 'drag' : 'switch', pokemon, pokemon.getFullDetails, `[from] ${sourceEffect}`);
@@ -2023,6 +2045,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				if (pokemon.m.sharedItemsUsed.includes(item)) continue;
 				const effect = 'item:' + this.toID(item);
 				pokemon.volatiles[effect] = this.initEffectState({ id: effect, target: pokemon });
+				this.addListenersFrom(this.dex.conditions.get(effect), pokemon, pokemon.volatiles[effect], pokemon.removeVolatile);
 			}
 		},
 	},
@@ -3177,6 +3200,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				pokemon.volatiles[effect] = this.initEffectState({ id: effect, target: pokemon });
 				if (!pokemon.m.abils) pokemon.m.abils = [];
 				if (!pokemon.m.abils.includes(effect)) pokemon.m.abils.push(effect);
+				this.addListenersFrom(this.dex.conditions.get(effect), pokemon, pokemon.volatiles[effect], pokemon.removeVolatile);
 			}
 		},
 	},
@@ -3200,6 +3224,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				pokemon.volatiles[effect] = this.initEffectState({ id: effect, target: pokemon });
 				if (!pokemon.m.abils) pokemon.m.abils = [];
 				if (!pokemon.m.abils.includes(effect)) pokemon.m.abils.push(effect);
+				this.addListenersFrom(this.dex.conditions.get(effect), pokemon, pokemon.volatiles[effect], pokemon.removeVolatile);
 			}
 		},
 	},

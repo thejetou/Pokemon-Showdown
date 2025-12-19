@@ -3159,11 +3159,11 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 				}
 				if (pokemon.volatiles['magnetrise']) {
 					applies = true;
-					delete pokemon.volatiles['magnetrise'];
+					pokemon.removeVolatile('magnetrise');
 				}
 				if (pokemon.volatiles['telekinesis']) {
 					applies = true;
-					delete pokemon.volatiles['telekinesis'];
+					pokemon.removeVolatile('telekinesis');
 				}
 				if (applies) this.add('-activate', pokemon, 'move: Gravity');
 			}

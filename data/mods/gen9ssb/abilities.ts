@@ -1494,7 +1494,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 					if (mon.volatiles[volatile]) {
 						if (volatile === 'perishsong') {
 							// will implode the pokemon otherwise
-							delete mon.volatiles[volatile];
+							mon.removeVolatile(volatile);
 						} else {
 							mon.removeVolatile(volatile);
 						}
@@ -1928,7 +1928,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			}
 		},
 		onEnd(pokemon) {
-			delete pokemon.volatiles['ultramystik'];
+			pokemon.removeVolatile('ultramystik');
 			this.add('-end', pokemon, 'Ultra Mystik', '[silent]');
 		},
 		onSourceModifyDamage(damage, source, target, move) {
@@ -3025,7 +3025,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 					this.singleEvent('End', this.dex.abilities.get('Illusion'), target.abilityState, target, pokemon, 'neutralizinggas');
 				}
 				if (target.volatiles['slowstart']) {
-					delete target.volatiles['slowstart'];
+					target.removeVolatile('slowstart');
 					this.add('-end', target, 'Slow Start', '[silent]');
 				}
 				if (STRONG_WEATHERS.includes(target.getAbility().id)) {

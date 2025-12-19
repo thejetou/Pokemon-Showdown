@@ -236,7 +236,7 @@ export const Conditions: import('../sim/dex-conditions').ConditionDataTable = {
 			// G-Max Centiferno and G-Max Sandblast continue even after the user leaves the field
 			const gmaxEffect = ['gmaxcentiferno', 'gmaxsandblast'].includes(this.effectState.sourceEffect.id);
 			if (source && (!source.isActive || source.hp <= 0 || !source.activeTurns) && !gmaxEffect) {
-				delete pokemon.volatiles['partiallytrapped'];
+				pokemon.removeVolatile('partiallytrapped');
 				this.add('-end', pokemon, this.effectState.sourceEffect, '[partiallytrapped]', '[silent]');
 				return;
 			}
@@ -257,7 +257,7 @@ export const Conditions: import('../sim/dex-conditions').ConditionDataTable = {
 		onResidual(target) {
 			if (target.status === 'slp') {
 				// don't lock, and bypass confusion for calming
-				delete target.volatiles['lockedmove'];
+				target.removeVolatile('lockedmove');
 			}
 			this.effectState.trueDuration--;
 		},
@@ -450,7 +450,7 @@ export const Conditions: import('../sim/dex-conditions').ConditionDataTable = {
 			const counter = this.effectState.counter || 1;
 			this.debug(`Success chance: ${Math.round(100 / counter)}%`);
 			const success = this.randomChance(1, counter);
-			if (!success) delete pokemon.volatiles['stall'];
+			if (!success) pokemon.removeVolatile('stall');
 			return success;
 		},
 		onRestart() {
@@ -758,7 +758,7 @@ export const Conditions: import('../sim/dex-conditions').ConditionDataTable = {
 			pokemon.removeVolatile('minimize');
 			pokemon.removeVolatile('substitute');
 			if (pokemon.volatiles['torment']) {
-				delete pokemon.volatiles['torment'];
+				pokemon.removeVolatile('torment');
 				this.add('-end', pokemon, 'Torment', '[silent]');
 			}
 			if (['cramorantgulping', 'cramorantgorging'].includes(pokemon.species.id) && !pokemon.transformed) {

@@ -23,13 +23,13 @@ export const Scripts: ModdedBattleScriptsData = {
 				if (pokemon.volatiles['partialtrappinglock']) {
 					const target = pokemon.volatiles['partialtrappinglock'].locked;
 					if (target.hp <= 0 || !target.volatiles['partiallytrapped']) {
-						delete pokemon.volatiles['partialtrappinglock'];
+						pokemon.removeVolatile('partialtrappinglock');
 					}
 				}
 				if (pokemon.volatiles['partiallytrapped']) {
 					const source = pokemon.volatiles['partiallytrapped'].source;
 					if (source.hp <= 0 || !source.volatiles['partialtrappinglock']) {
-						delete pokemon.volatiles['partiallytrapped'];
+						pokemon.removeVolatile('partiallytrapped');
 					}
 				}
 			}
@@ -204,6 +204,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				if (!rawSpecies) continue;
 				const species = pokemon.setSpecies(rawSpecies);
 				if (!species) continue;
+				this.removeListenersFrom(pokemon.baseSpecies, pokemon);
 				pokemon.baseSpecies = rawSpecies;
 				pokemon.details = pokemon.getUpdatedDetails();
 				pokemon.setAbility(species.abilities['0'], null, null, true);
@@ -343,6 +344,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			action.target.fainted = false;
 			action.target.faintQueued = false;
 			action.target.subFainted = false;
+			this.removeListenersFrom(action.target.getStatus(), action.target);
 			action.target.status = '';
 			action.target.hp = 1; // Needed so hp functions works
 			action.target.sethp(action.target.maxhp / 2);
